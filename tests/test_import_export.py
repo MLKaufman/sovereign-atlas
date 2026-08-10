@@ -35,6 +35,10 @@ def test_import_export_and_site_build(tmp_path):
     assert index.exists()
     rows = json.loads((index.parent / "markers.json").read_text())
     assert rows[0]["cell_type"] == "Example cell"
+    assert rows[0]["source_links"] == [
+        {"title": "Example reference", "url": "https://doi.org/10.0000/example"}
+    ]
+    assert 'target="_blank"' in (index.parent / "app.js").read_text()
     assert (index.parent / ".nojekyll").exists()
 
 

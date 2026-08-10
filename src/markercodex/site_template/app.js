@@ -7,6 +7,12 @@ let allRows = [], visibleRows = [], sortKey = "gene_symbol", sortDirection = 1;
 const $ = (id) => document.getElementById(id);
 const text = (value) => value == null ? "" : String(value);
 const escapeHtml = (value) => text(value).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+const safeUrl = (value) => {
+  try {
+    const url = new URL(text(value), window.location.href);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch { return ""; }
+};
 
 function setOptions(id, key) {
   const select = $(id), first = select.options[0];
@@ -19,11 +25,29 @@ function renderHead() {
   ).join("");
 }
 
-function renderCell(key, value) {
+function renderSources(row) {
+  const links = Array.isArray(row.source_links) ? row.source_links : [];
+  if (!links.length) return '<span class="sources">No source linked</span>';
+  const seen = new Set();
+  return links.filter(source => {
+    const identity = `${text(source.title)}\n${text(source.url)}`;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  }).map(source => {
+    const title = escapeHtml(source.title || "Open source");
+    const url = safeUrl(source.url);
+    return url
+      ? `<a class="sources" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${title} ↗</a>`
+      : `<span class="sources">${title}</span>`;
+  }).join("<br>");
+}
+
+function renderCell(key, value, row) {
   if (key === "gene_symbol") return `<span class="gene">${escapeHtml(value)}</span>`;
   if (key === "marker_direction") return `<span class="pill ${value === "negative" ? "negative" : ""}">${escapeHtml(value)}</span>`;
   if (key === "bbsr_verified") return value ? '<span class="yes" aria-label="Yes">✓</span>' : "—";
-  if (key === "source_titles") return `<span class="sources">${escapeHtml(value || "No source linked")}</span>`;
+  if (key === "source_titles") return renderSources(row);
   return escapeHtml(value || "—");
 }
 
@@ -36,7 +60,7 @@ function applyFilters() {
     return Object.entries(filters).every(([key, value]) => !value || text(row[key]) === value);
   }).sort((a, b) => text(a[sortKey]).localeCompare(text(b[sortKey]), undefined, {numeric: true}) * sortDirection);
   renderHead();
-  $("tableBody").innerHTML = visibleRows.map(row => `<tr>${columns.map(([key]) => `<td>${renderCell(key, row[key])}</td>`).join("")}</tr>`).join("");
+  $("tableBody").innerHTML = visibleRows.map(row => `<tr>${columns.map(([key]) => `<td>${renderCell(key, row[key], row)}</td>`).join("")}</tr>`).join("");
   $("visibleCount").textContent = visibleRows.length.toLocaleString();
   $("empty").hidden = visibleRows.length > 0;
   $("tableBody").parentElement.hidden = visibleRows.length === 0;

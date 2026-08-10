@@ -32,24 +32,74 @@ def frame(query: str, params: list | None = None) -> pd.DataFrame:
         return con.execute(query, params or []).fetchdf()
 
 
+def render_assertion_editor(current: pd.Series, key: str) -> None:
+    assertion_id = int(current.assertion_id)
+    st.subheader(f"Edit #{assertion_id} · {current.gene_symbol} → {current.cell_type}")
+    source_url = current.get("source_url")
+    if source_url and not pd.isna(source_url):
+        st.link_button("Open source ↗", str(source_url))
+    notes_value = "" if pd.isna(current.notes) else str(current.notes)
+    with st.form(f"edit_assertion_{key}"):
+        confidence = st.selectbox(
+            "Confidence",
+            ["low", "moderate", "high"],
+            index=["low", "moderate", "high"].index(current.confidence),
+            key=f"confidence_{key}",
+        )
+        verified = st.checkbox(
+            "BBSR verified", value=bool(current.bbsr_verified), key=f"verified_{key}"
+        )
+        notes = st.text_area("Notes", value=notes_value, key=f"notes_{key}")
+        save = st.form_submit_button("Save changes", type="primary")
+    if save:
+        with database(DB_PATH) as con:
+            con.execute(
+                "UPDATE marker_assertions SET confidence=?, bbsr_verified=?, notes=?, updated_at=now() WHERE assertion_id=?",
+                [confidence, verified, notes or None, assertion_id],
+            )
+        st.success("Changes saved")
+        st.rerun()
+    if st.button("Delete assertion", type="secondary", key=f"delete_{key}"):
+        with database(DB_PATH) as con:
+            con.execute("DELETE FROM evidence WHERE assertion_id=?", [assertion_id])
+            con.execute("DELETE FROM marker_assertions WHERE assertion_id=?", [assertion_id])
+        st.success("Assertion and its evidence links deleted")
+        st.rerun()
+
+
 browse, add_tab, edit_tab, import_tab, sources_tab = st.tabs(
     ["Browse", "Add marker", "Edit / delete", "Bulk import", "References"]
 )
 
 with browse:
     query = st.text_input("Search", placeholder="Gene, cell type, tissue, or source")
-    sql = "SELECT * FROM marker_atlas"
+    sql = """SELECT assertion_id, gene_symbol, cell_type, species_common_name,
+        tissue, marker_direction, confidence, bbsr_verified, source_titles,
+        source_url, notes FROM marker_atlas"""
     params = []
     if query:
         sql += (
             " WHERE concat_ws(' ', gene_symbol, cell_type, species, tissue, source_titles) ILIKE ?"
         )
         params = [f"%{query}%"]
-    st.dataframe(
-        frame(sql + " ORDER BY cell_type, gene_symbol", params),
+    browse_rows = frame(sql + " ORDER BY cell_type, gene_symbol", params)
+    selection = st.dataframe(
+        browse_rows,
         use_container_width=True,
         hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="browse_assertions",
+        column_config={
+            "source_url": st.column_config.LinkColumn(
+                "Source link", display_text="Open source ↗"
+            )
+        },
     )
+    st.caption("Select a row to edit it directly below the table.")
+    if selection.selection.rows:
+        selected = browse_rows.iloc[selection.selection.rows[0]]
+        render_assertion_editor(selected, f"browse_{int(selected.assertion_id)}")
 
 with add_tab:
     with st.form("new_assertion", clear_on_submit=True):
@@ -94,7 +144,7 @@ with add_tab:
 
 with edit_tab:
     assertions = frame(
-        "SELECT assertion_id, gene_symbol, cell_type, tissue, marker_direction, confidence, bbsr_verified, notes FROM marker_atlas ORDER BY assertion_id"
+        "SELECT assertion_id, gene_symbol, cell_type, tissue, marker_direction, confidence, bbsr_verified, notes, source_url FROM marker_atlas ORDER BY assertion_id"
     )
     if assertions.empty:
         st.info("No assertions to edit yet.")
@@ -107,29 +157,7 @@ with edit_tab:
             ),
         )
         current = assertions.loc[assertions.assertion_id == choice].iloc[0]
-        with st.form("edit_assertion"):
-            confidence = st.selectbox(
-                "Confidence",
-                ["low", "moderate", "high"],
-                index=["low", "moderate", "high"].index(current.confidence),
-            )
-            verified = st.checkbox("BBSR verified", value=bool(current.bbsr_verified))
-            notes = st.text_area("Notes", value=current.notes or "")
-            save = st.form_submit_button("Save changes", type="primary")
-        if save:
-            with database(DB_PATH) as con:
-                con.execute(
-                    "UPDATE marker_assertions SET confidence=?, bbsr_verified=?, notes=?, updated_at=now() WHERE assertion_id=?",
-                    [confidence, verified, notes or None, int(choice)],
-                )
-            st.success("Changes saved")
-            st.rerun()
-        if st.button("Delete assertion", type="secondary"):
-            with database(DB_PATH) as con:
-                con.execute("DELETE FROM evidence WHERE assertion_id=?", [int(choice)])
-                con.execute("DELETE FROM marker_assertions WHERE assertion_id=?", [int(choice)])
-            st.success("Assertion and its evidence links deleted")
-            st.rerun()
+        render_assertion_editor(current, f"manage_{int(choice)}")
 
 with import_tab:
     st.markdown(
@@ -152,9 +180,21 @@ with import_tab:
 
 with sources_tab:
     st.dataframe(
-        frame("SELECT * FROM sources ORDER BY publication_year DESC NULLS LAST, title"),
+        frame(
+            """SELECT *, coalesce(
+                url,
+                CASE WHEN doi IS NOT NULL THEN 'https://doi.org/' || doi END,
+                CASE WHEN pmid IS NOT NULL THEN 'https://pubmed.ncbi.nlm.nih.gov/' || pmid || '/' END
+            ) AS source_link
+            FROM sources ORDER BY publication_year DESC NULLS LAST, title"""
+        ),
         use_container_width=True,
         hide_index=True,
+        column_config={
+            "source_link": st.column_config.LinkColumn(
+                "Open source", display_text="Open source ↗"
+            )
+        },
     )
     with st.form("new_source", clear_on_submit=True):
         title = st.text_input("Title*")
