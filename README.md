@@ -81,7 +81,7 @@ CSV is available at `data/exports/markers.csv`. For remote, read-only use, other
 ## Publish on GitHub Pages
 
 1. Create a GitHub repository and push this project to its `main` branch.
-2. In **Settings → Pages → Build and deployment**, choose **GitHub Actions**.
+2. Before the first deployment, open **Settings → Pages → Build and deployment** and choose **GitHub Actions**. The repository's built-in workflow token cannot perform this one-time enablement.
 3. Commit curated changes to `data/markercodex.duckdb`.
 
 The published atlas is available at:
