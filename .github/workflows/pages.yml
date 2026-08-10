@@ -3,12 +3,6 @@ name: Build and deploy atlas
 on:
   push:
     branches: [main]
-    paths:
-      - "data/markercodex.duckdb"
-      - "src/markercodex/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:

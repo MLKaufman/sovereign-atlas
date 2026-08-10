@@ -2,6 +2,8 @@
 
 **MarkerCodex is a self-contained, evidence-backed scRNA-seq marker atlas.** It models marker claims as Gene ↔ Cell type assertions in biological context, then attaches one or more sources through explicit evidence records. One gene can identify many cell types; one source can support many claims; and one claim can carry several independent sources without duplicated rows.
 
+**[Open the live MarkerCodex atlas](https://mlkaufman.github.io/sovereign-atlas/)**
+
 The repository is the application: DuckDB is canonical, Parquet and CSV snapshots are portable, GitHub Pages hosts the generated atlas, and a local Streamlit curator handles maintenance. There is no server, account system, or external API to operate.
 
 ## What is included
@@ -81,6 +83,12 @@ CSV is available at `data/exports/markers.csv`. For remote, read-only use, other
 1. Create a GitHub repository and push this project to its `main` branch.
 2. In **Settings → Pages → Build and deployment**, choose **GitHub Actions**.
 3. Commit curated changes to `data/markercodex.duckdb`.
+
+The published atlas is available at:
+
+<https://mlkaufman.github.io/sovereign-atlas/>
+
+If the repository is private, GitHub Pages requires GitHub Pro, Team, or Enterprise. On GitHub Free, make the repository public before enabling Pages.
 
 The Pages workflow regenerates the exports and site from the canonical database, then deploys the `site/` artifact. The generated site is intentionally not committed. Pull requests run schema initialization, exports, the site build, linting, and tests.
 
