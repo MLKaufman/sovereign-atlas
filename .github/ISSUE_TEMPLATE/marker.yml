@@ -1,0 +1,35 @@
+name: Propose a marker
+description: Suggest a marker assertion or supporting evidence
+title: "[Marker]: "
+labels: [marker-proposal]
+body:
+  - type: input
+    id: gene
+    attributes:
+      label: Gene symbol
+    validations:
+      required: true
+  - type: input
+    id: cell-type
+    attributes:
+      label: Cell type and ontology ID
+    validations:
+      required: true
+  - type: input
+    id: species
+    attributes:
+      label: Species
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Biological context
+      description: Tissue, condition, developmental stage, assay, and marker direction.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting source and evidence
+      description: DOI/PMID/URL and the figure, table, or passage supporting the assertion.
+    validations:
+      required: true

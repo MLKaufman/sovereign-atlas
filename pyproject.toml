@@ -1,0 +1,41 @@
+[project]
+name = "markercodex"
+version = "0.1.0"
+description = "An evidence-backed, self-contained scRNA-seq marker atlas"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "MarkerCodex contributors" }]
+keywords = ["single-cell", "scrna-seq", "markers", "duckdb", "cell-types"]
+dependencies = [
+  "duckdb>=1.3,<2",
+  "pandas>=2.2,<4",
+  "pyarrow>=18,<24",
+  "streamlit>=1.42,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<10", "ruff>=0.9,<1"]
+
+[project.scripts]
+markercodex = "markercodex.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/markercodex"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["work"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]

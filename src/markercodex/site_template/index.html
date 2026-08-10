@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MarkerCodex — an evidence-backed scRNA-seq marker atlas">
+  <title>MarkerCodex · scRNA-seq marker atlas</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="eyebrow">EVIDENCE-BACKED CELL IDENTITY</div>
+    <div class="hero-row">
+      <div>
+        <h1>Marker<span>Codex</span></h1>
+        <p>Curated scRNA-seq markers, connected to cell types, biological context, and sources.</p>
+      </div>
+      <div class="stat" aria-live="polite"><strong id="visibleCount">0</strong><span>assertions shown</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="toolbar" aria-label="Atlas controls">
+      <label class="search">Search atlas
+        <input id="search" type="search" placeholder="Gene, cell type, tissue, source…" autocomplete="off">
+      </label>
+      <label>Species<select id="speciesFilter"><option value="">All species</option></select></label>
+      <label>Cell type<select id="cellFilter"><option value="">All cell types</option></select></label>
+      <label>Tissue<select id="tissueFilter"><option value="">All tissues</option></select></label>
+      <label>Direction<select id="directionFilter"><option value="">Any</option><option>positive</option><option>negative</option></select></label>
+      <label class="check"><input id="verifiedFilter" type="checkbox"> Human verified</label>
+    </section>
+
+    <section class="actions" aria-label="Copy filtered genes">
+      <span>Copy visible unique genes</span>
+      <button type="button" data-copy="r">R vector</button>
+      <button type="button" data-copy="python">Python list</button>
+      <button type="button" data-copy="text">Plain text</button>
+      <button id="clearFilters" class="quiet" type="button">Clear filters</button>
+      <span id="copyStatus" role="status" aria-live="polite"></span>
+    </section>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="tableHead"></tr></thead>
+        <tbody id="tableBody"><tr><td class="loading">Loading atlas…</td></tr></tbody>
+      </table>
+    </div>
+    <p id="empty" class="empty" hidden>No marker assertions match these filters.</p>
+  </main>
+
+  <footer>MarkerCodex · portable DuckDB, Parquet, and CSV · no backend required</footer>
+  <script src="app.js"></script>
+</body>
+</html>
+
