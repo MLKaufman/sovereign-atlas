@@ -66,7 +66,7 @@ with add_tab:
         direction = c1.selectbox("Direction", ["positive", "negative"])
         confidence = c2.selectbox("Confidence", ["moderate", "high", "low"])
         assay = c3.text_input("Assay", value="scRNA-seq")
-        verified = st.checkbox("Human verified")
+        verified = st.checkbox("BBSR verified")
         notes = st.text_area("Curator notes")
         submitted = st.form_submit_button("Save marker assertion", type="primary")
     if submitted:
@@ -85,7 +85,7 @@ with add_tab:
                     developmental_stage=stage,
                     assay=assay,
                     confidence=confidence,
-                    human_verified=verified,
+                    bbsr_verified=verified,
                     notes=notes,
                 )
             st.success(f"Saved assertion {assertion_id}")
@@ -94,7 +94,7 @@ with add_tab:
 
 with edit_tab:
     assertions = frame(
-        "SELECT assertion_id, gene_symbol, cell_type, tissue, marker_direction, confidence, human_verified, notes FROM marker_atlas ORDER BY assertion_id"
+        "SELECT assertion_id, gene_symbol, cell_type, tissue, marker_direction, confidence, bbsr_verified, notes FROM marker_atlas ORDER BY assertion_id"
     )
     if assertions.empty:
         st.info("No assertions to edit yet.")
@@ -113,13 +113,13 @@ with edit_tab:
                 ["low", "moderate", "high"],
                 index=["low", "moderate", "high"].index(current.confidence),
             )
-            verified = st.checkbox("Human verified", value=bool(current.human_verified))
+            verified = st.checkbox("BBSR verified", value=bool(current.bbsr_verified))
             notes = st.text_area("Notes", value=current.notes or "")
             save = st.form_submit_button("Save changes", type="primary")
         if save:
             with database(DB_PATH) as con:
                 con.execute(
-                    "UPDATE marker_assertions SET confidence=?, human_verified=?, notes=?, updated_at=now() WHERE assertion_id=?",
+                    "UPDATE marker_assertions SET confidence=?, bbsr_verified=?, notes=?, updated_at=now() WHERE assertion_id=?",
                     [confidence, verified, notes or None, int(choice)],
                 )
             st.success("Changes saved")

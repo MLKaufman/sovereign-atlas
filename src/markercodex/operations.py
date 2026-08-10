@@ -13,15 +13,18 @@ def upsert_species(
     common_name: str | None = None,
     taxonomy_id: int | None = None,
 ) -> int:
+    scientific_name = scientific_name.strip()
+    existing = con.execute(
+        "SELECT species_id FROM species WHERE scientific_name = ?", [scientific_name]
+    ).fetchone()
+    if existing:
+        return existing[0]
     con.execute(
-        """INSERT INTO species(scientific_name, common_name, taxonomy_id) VALUES (?, ?, ?)
-        ON CONFLICT(scientific_name) DO UPDATE SET
-          common_name = coalesce(excluded.common_name, species.common_name),
-          taxonomy_id = coalesce(excluded.taxonomy_id, species.taxonomy_id)""",
-        [scientific_name.strip(), common_name or None, taxonomy_id],
+        "INSERT INTO species(scientific_name, common_name, taxonomy_id) VALUES (?, ?, ?)",
+        [scientific_name, common_name or None, taxonomy_id],
     )
     return con.execute(
-        "SELECT species_id FROM species WHERE scientific_name = ?", [scientific_name.strip()]
+        "SELECT species_id FROM species WHERE scientific_name = ?", [scientific_name]
     ).fetchone()[0]
 
 
@@ -31,9 +34,13 @@ def upsert_gene(
     symbol = symbol.strip()
     if not symbol:
         raise ValueError("Gene symbol is required")
+    existing = con.execute(
+        "SELECT gene_id FROM genes WHERE species_id = ? AND symbol = ?", [species_id, symbol]
+    ).fetchone()
+    if existing:
+        return existing[0]
     con.execute(
-        """INSERT INTO genes(species_id, symbol, stable_id) VALUES (?, ?, ?)
-        ON CONFLICT(species_id, symbol) DO UPDATE SET stable_id = coalesce(excluded.stable_id, genes.stable_id)""",
+        "INSERT INTO genes(species_id, symbol, stable_id) VALUES (?, ?, ?)",
         [species_id, symbol, stable_id or None],
     )
     return con.execute(
@@ -51,9 +58,14 @@ def upsert_cell_type(
     if not name:
         raise ValueError("Cell type is required")
     ontology_id = ontology_id or ""
+    existing = con.execute(
+        "SELECT cell_type_id FROM cell_types WHERE name = ? AND ontology_id = ?",
+        [name, ontology_id],
+    ).fetchone()
+    if existing:
+        return existing[0]
     con.execute(
-        """INSERT INTO cell_types(name, ontology_id, description) VALUES (?, ?, ?)
-        ON CONFLICT(name, ontology_id) DO UPDATE SET description = coalesce(excluded.description, cell_types.description)""",
+        "INSERT INTO cell_types(name, ontology_id, description) VALUES (?, ?, ?)",
         [name, ontology_id, description or None],
     )
     return con.execute(
@@ -73,7 +85,7 @@ def add_assertion(
     developmental_stage: str = "",
     assay: str = "scRNA-seq",
     confidence: str = "moderate",
-    human_verified: bool = False,
+    bbsr_verified: bool = False,
     notes: str | None = None,
 ) -> int:
     values: list[Any] = [
@@ -85,17 +97,17 @@ def add_assertion(
         developmental_stage,
         assay,
         confidence,
-        human_verified,
+        bbsr_verified,
         notes or None,
     ]
     con.execute(
         """INSERT INTO marker_assertions(
           gene_id, cell_type_id, marker_direction, tissue, condition,
-          developmental_stage, assay, confidence, human_verified, notes
+          developmental_stage, assay, confidence, bbsr_verified, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(gene_id, cell_type_id, marker_direction, tissue, condition, developmental_stage, assay)
         DO UPDATE SET confidence = excluded.confidence,
-          human_verified = excluded.human_verified, notes = excluded.notes,
+          bbsr_verified = excluded.bbsr_verified, notes = excluded.notes,
           updated_at = now()""",
         values,
     )

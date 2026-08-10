@@ -47,7 +47,7 @@ def import_csv(
                     developmental_stage=row.get("developmental_stage") or "",
                     assay=row.get("assay") or "scRNA-seq",
                     confidence=row.get("confidence") or "moderate",
-                    human_verified=str(row.get("human_verified", "")).lower()
+                    bbsr_verified=str(row.get("bbsr_verified", "")).lower()
                     in {"1", "true", "yes", "y"},
                     notes=row.get("notes") or None,
                 )

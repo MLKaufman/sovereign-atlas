@@ -50,10 +50,10 @@ def test_upsert_assertion_updates_curation_fields(tmp_path):
             gene_id=gene_id,
             cell_type_id=cell_id,
             confidence="high",
-            human_verified=True,
+            bbsr_verified=True,
         )
         value = con.execute(
-            "SELECT confidence, human_verified FROM marker_assertions WHERE assertion_id=?", [first]
+            "SELECT confidence, bbsr_verified FROM marker_assertions WHERE assertion_id=?", [first]
         ).fetchone()
     assert first == second
     assert value == ("high", True)

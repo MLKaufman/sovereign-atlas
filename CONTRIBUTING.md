@@ -8,5 +8,6 @@ Marker contributions need a gene, species, cell type, marker direction, biologic
 4. Run `uv run ruff check .` and `uv run pytest`.
 5. Open a pull request describing the curation decisions and source evidence.
 
-Do not add sensitive or unpublished data. A checked `human_verified` value means a curator inspected the claimed source-to-marker relationship; it does not mean the marker is universally specific.
-
+Do not add sensitive or unpublished data. Only the BBSR team may check
+`bbsr_verified`; it means a BBSR curator inspected the claimed source-to-marker
+relationship, not that the marker is universally specific.

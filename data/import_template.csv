@@ -1,2 +1,2 @@
-species,species_common_name,gene_symbol,stable_id,cell_type,ontology_id,marker_direction,tissue,condition,developmental_stage,assay,confidence,human_verified,notes,source_title,citation,doi,pmid,url,evidence_type,evidence_location,evidence_note
+species,species_common_name,gene_symbol,stable_id,cell_type,ontology_id,marker_direction,tissue,condition,developmental_stage,assay,confidence,bbsr_verified,notes,source_title,citation,doi,pmid,url,evidence_type,evidence_location,evidence_note
 

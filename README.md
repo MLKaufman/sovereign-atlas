@@ -51,7 +51,15 @@ uv run markercodex import path/to/markers.csv
 
 Required columns are `species`, `gene_symbol`, and `cell_type`. All other template columns are optional. Re-importing the same assertion updates its confidence, verification, and notes. Rows are imported in one transaction, so a bad row does not leave a partial batch.
 
-`human_verified` accepts `true`, `yes`, `y`, or `1`. Source columns create or reuse a reference and link it to the assertion as evidence.
+`bbsr_verified` accepts `true`, `yes`, `y`, or `1`. Only the BBSR team should set
+this field. Source columns create or reuse a reference and link it to the
+assertion as evidence.
+
+The canonical database includes a reviewed human immune-cell seed set with 160
+unverified marker assertions covering B cells, T cells, macrophages, and 28 subtypes. The
+reproducible inputs are `data/seeds/human_b_t_macrophage_markers.csv` and
+`data/seeds/human_immune_cell_type_hierarchy.sql`; each marker row includes its
+primary publication, DOI, PMID, and evidence note.
 
 ## Access from other apps
 
@@ -113,7 +121,7 @@ See [docs/schema.md](docs/schema.md) for modeling details and [CONTRIBUTING.md](
 ## Data integrity and scope
 
 - A marker is an evidence-backed assertion, not a universal truth. Tissue, condition, stage, assay, direction, and species matter.
-- “Human verified” records source review; it is not a biological quality guarantee.
+- “BBSR verified” records source review performed by the BBSR team; it is not a biological quality guarantee.
 - Gene symbols are unique only within species.
 - Cell Ontology IDs are strongly encouraged for interoperable annotations.
 - Never edit DuckDB with two writing processes at once. Stop the curator before running a bulk import.

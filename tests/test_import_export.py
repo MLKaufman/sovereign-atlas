@@ -16,7 +16,7 @@ def test_import_export_and_site_build(tmp_path):
                 "gene_symbol": "GENE1",
                 "cell_type": "Example cell",
                 "tissue": "example tissue",
-                "human_verified": "true",
+                "bbsr_verified": "true",
                 "source_title": "Example reference",
                 "doi": "10.0000/example",
             }
@@ -47,3 +47,37 @@ def test_import_requires_core_columns(tmp_path):
         assert "Missing required columns" in str(exc)
     else:
         raise AssertionError("Expected ValueError")
+
+
+def test_import_reuses_referenced_species_genes_and_cell_types(tmp_path):
+    csv_path = tmp_path / "repeated.csv"
+    pd.DataFrame(
+        [
+            {
+                "species": "Homo sapiens",
+                "gene_symbol": "GENE1",
+                "cell_type": "Cell type A",
+            },
+            {
+                "species": "Homo sapiens",
+                "gene_symbol": "GENE2",
+                "cell_type": "Cell type A",
+            },
+            {
+                "species": "Homo sapiens",
+                "gene_symbol": "GENE1",
+                "cell_type": "Cell type B",
+            },
+        ]
+    ).to_csv(csv_path, index=False)
+
+    db_path = tmp_path / "atlas.duckdb"
+    assert import_csv(csv_path, db_path) == 3
+
+    import duckdb
+
+    with duckdb.connect(str(db_path), read_only=True) as con:
+        assert con.execute("SELECT count(*) FROM species").fetchone()[0] == 1
+        assert con.execute("SELECT count(*) FROM genes").fetchone()[0] == 2
+        assert con.execute("SELECT count(*) FROM cell_types").fetchone()[0] == 2
+        assert con.execute("SELECT count(*) FROM marker_assertions").fetchone()[0] == 3

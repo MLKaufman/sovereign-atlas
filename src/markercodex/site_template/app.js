@@ -1,7 +1,7 @@
 const columns = [
   ["gene_symbol", "Gene"], ["cell_type", "Cell type"], ["species_common_name", "Species"],
   ["tissue", "Tissue"], ["marker_direction", "Direction"], ["confidence", "Confidence"],
-  ["human_verified", "Verified"], ["source_titles", "Sources"], ["assay", "Assay"]
+  ["bbsr_verified", "BBSR verified"], ["source_titles", "Sources"], ["assay", "Assay"]
 ];
 let allRows = [], visibleRows = [], sortKey = "gene_symbol", sortDirection = 1;
 const $ = (id) => document.getElementById(id);
@@ -22,7 +22,7 @@ function renderHead() {
 function renderCell(key, value) {
   if (key === "gene_symbol") return `<span class="gene">${escapeHtml(value)}</span>`;
   if (key === "marker_direction") return `<span class="pill ${value === "negative" ? "negative" : ""}">${escapeHtml(value)}</span>`;
-  if (key === "human_verified") return value ? '<span class="yes" aria-label="Yes">✓</span>' : "—";
+  if (key === "bbsr_verified") return value ? '<span class="yes" aria-label="Yes">✓</span>' : "—";
   if (key === "source_titles") return `<span class="sources">${escapeHtml(value || "No source linked")}</span>`;
   return escapeHtml(value || "—");
 }
@@ -32,7 +32,7 @@ function applyFilters() {
   const filters = { species_common_name: $("speciesFilter").value, cell_type: $("cellFilter").value, tissue: $("tissueFilter").value, marker_direction: $("directionFilter").value };
   visibleRows = allRows.filter(row => {
     if (query && !Object.values(row).some(v => text(v).toLowerCase().includes(query))) return false;
-    if ($("verifiedFilter").checked && !row.human_verified) return false;
+    if ($("verifiedFilter").checked && !row.bbsr_verified) return false;
     return Object.entries(filters).every(([key, value]) => !value || text(row[key]) === value);
   }).sort((a, b) => text(a[sortKey]).localeCompare(text(b[sortKey]), undefined, {numeric: true}) * sortDirection);
   renderHead();
@@ -63,4 +63,3 @@ $("clearFilters").addEventListener("click", () => { $("search").value = ""; ["sp
 fetch("markers.json").then(response => { if (!response.ok) throw new Error("Could not load markers"); return response.json(); }).then(rows => {
   allRows = rows; setOptions("speciesFilter", "species_common_name"); setOptions("cellFilter", "cell_type"); setOptions("tissueFilter", "tissue"); applyFilters();
 }).catch(error => { $("tableBody").innerHTML = `<tr><td class="loading">${escapeHtml(error.message)}. Serve this directory with a local web server.</td></tr>`; });
-
