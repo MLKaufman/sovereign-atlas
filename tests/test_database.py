@@ -70,3 +70,13 @@ def test_cell_type_without_ontology_is_not_duplicated(tmp_path):
         count = con.execute("SELECT count(*) FROM cell_types").fetchone()[0]
     assert first == second
     assert count == 1
+
+
+def test_mouse_gene_symbols_are_normalized(tmp_path):
+    path = tmp_path / "atlas.duckdb"
+    initialize(path)
+    with database(path) as con:
+        species_id = upsert_species(con, "Mus musculus", "mouse", 10090)
+        gene_id = upsert_gene(con, species_id, "CD19")
+        symbol = con.execute("SELECT symbol FROM genes WHERE gene_id = ?", [gene_id]).fetchone()[0]
+    assert symbol == "Cd19"

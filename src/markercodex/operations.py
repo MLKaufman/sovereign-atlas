@@ -50,6 +50,11 @@ def upsert_gene(
     symbol = symbol.strip()
     if not symbol:
         raise ValueError("Gene symbol is required")
+    species = con.execute(
+        "SELECT scientific_name FROM species WHERE species_id = ?", [species_id]
+    ).fetchone()
+    if species and species[0] == "Mus musculus":
+        symbol = symbol[:1].upper() + symbol[1:].lower()
     existing = con.execute(
         "SELECT gene_id FROM genes WHERE species_id = ? AND symbol = ?", [species_id, symbol]
     ).fetchone()

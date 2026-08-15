@@ -53,6 +53,7 @@ def test_panglaodb_transform_expands_species_and_preserves_metadata(tmp_path):
         "cell_types": 1,
     }
     assert set(frame.species) == {"Homo sapiens", "Mus musculus"}
+    assert set(frame.gene_symbol) == {"GENE1", "Gene1"}
     assert set(frame.gene_aliases) == {"A; B"}
     assert set(frame.major_cell_type) == {"Example cells"}
     assert set(frame.bbsr_verified) == {"false"}

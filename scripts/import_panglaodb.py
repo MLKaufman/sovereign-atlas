@@ -44,6 +44,11 @@ def aliases(value: object) -> set[str]:
     return {alias.strip() for alias in text.split("|") if alias.strip()}
 
 
+def gene_symbol(value: object, target: str) -> str:
+    symbol = clean(value)
+    return symbol[:1].upper() + symbol[1:].lower() if target == "Mm" else symbol
+
+
 def transform(source_path: Path, source_title: str) -> tuple[pd.DataFrame, dict[str, int]]:
     source = pd.read_csv(
         source_path,
@@ -80,15 +85,15 @@ def transform(source_path: Path, source_title: str) -> tuple[pd.DataFrame, dict[
         if not targets:
             skipped += 1
             continue
-        symbol = clean(row["official gene symbol"])
         for target in targets:
+            symbol = gene_symbol(row["official gene symbol"], target)
             expanded.append((row, target))
             alias_map.setdefault((target, symbol), set()).update(aliases(row["nicknames"]))
 
     records = []
     for row, target in expanded:
         scientific_name, common_name = SPECIES[target]
-        symbol = clean(row["official gene symbol"])
+        symbol = gene_symbol(row["official gene symbol"], target)
         canonical = number(row["canonical marker"])
         records.append(
             {
