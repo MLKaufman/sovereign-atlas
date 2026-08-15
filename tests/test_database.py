@@ -14,7 +14,7 @@ def test_initialize_is_idempotent(tmp_path):
     initialize(path)
     initialize(path)
     with database(path, read_only=True) as con:
-        assert con.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 2
+        assert con.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 4
         assert con.execute("SELECT count(*) FROM marker_atlas").fetchone()[0] == 0
 
 
@@ -51,12 +51,14 @@ def test_upsert_assertion_updates_curation_fields(tmp_path):
             cell_type_id=cell_id,
             confidence="high",
             bbsr_verified=True,
+            submitter="BBSR curator",
         )
         value = con.execute(
-            "SELECT confidence, bbsr_verified FROM marker_assertions WHERE assertion_id=?", [first]
+            "SELECT confidence, bbsr_verified, submitter FROM marker_assertions WHERE assertion_id=?",
+            [first],
         ).fetchone()
     assert first == second
-    assert value == ("high", True)
+    assert value == ("high", True, "BBSR curator")
 
 
 def test_cell_type_without_ontology_is_not_duplicated(tmp_path):

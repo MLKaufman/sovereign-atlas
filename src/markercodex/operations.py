@@ -28,8 +28,24 @@ def upsert_species(
     ).fetchone()[0]
 
 
+def set_gene_aliases(
+    con: duckdb.DuckDBPyConnection, gene_id: int, aliases: list[str]
+) -> None:
+    normalized = sorted({alias.strip() for alias in aliases if alias.strip()})
+    con.execute("DELETE FROM gene_aliases WHERE gene_id = ?", [gene_id])
+    if normalized:
+        con.executemany(
+            "INSERT INTO gene_aliases(gene_id, alias) VALUES (?, ?)",
+            [[gene_id, alias] for alias in normalized],
+        )
+
+
 def upsert_gene(
-    con: duckdb.DuckDBPyConnection, species_id: int, symbol: str, stable_id: str | None = None
+    con: duckdb.DuckDBPyConnection,
+    species_id: int,
+    symbol: str,
+    stable_id: str | None = None,
+    aliases: list[str] | None = None,
 ) -> int:
     symbol = symbol.strip()
     if not symbol:
@@ -38,14 +54,19 @@ def upsert_gene(
         "SELECT gene_id FROM genes WHERE species_id = ? AND symbol = ?", [species_id, symbol]
     ).fetchone()
     if existing:
+        if aliases is not None:
+            set_gene_aliases(con, existing[0], aliases)
         return existing[0]
     con.execute(
         "INSERT INTO genes(species_id, symbol, stable_id) VALUES (?, ?, ?)",
         [species_id, symbol, stable_id or None],
     )
-    return con.execute(
+    gene_id = con.execute(
         "SELECT gene_id FROM genes WHERE species_id = ? AND symbol = ?", [species_id, symbol]
     ).fetchone()[0]
+    if aliases is not None:
+        set_gene_aliases(con, gene_id, aliases)
+    return gene_id
 
 
 def upsert_cell_type(
@@ -53,6 +74,7 @@ def upsert_cell_type(
     name: str,
     ontology_id: str | None = None,
     description: str | None = None,
+    parent_cell_type_id: int | None = None,
 ) -> int:
     name = name.strip()
     if not name:
@@ -65,8 +87,8 @@ def upsert_cell_type(
     if existing:
         return existing[0]
     con.execute(
-        "INSERT INTO cell_types(name, ontology_id, description) VALUES (?, ?, ?)",
-        [name, ontology_id, description or None],
+        "INSERT INTO cell_types(name, ontology_id, description, parent_cell_type_id) VALUES (?, ?, ?, ?)",
+        [name, ontology_id, description or None, parent_cell_type_id],
     )
     return con.execute(
         "SELECT cell_type_id FROM cell_types WHERE name = ? AND ontology_id = ?",
@@ -86,6 +108,7 @@ def add_assertion(
     assay: str = "scRNA-seq",
     confidence: str = "moderate",
     bbsr_verified: bool = False,
+    submitter: str | None = None,
     notes: str | None = None,
 ) -> int:
     values: list[Any] = [
@@ -98,16 +121,18 @@ def add_assertion(
         assay,
         confidence,
         bbsr_verified,
+        submitter or None,
         notes or None,
     ]
     con.execute(
         """INSERT INTO marker_assertions(
           gene_id, cell_type_id, marker_direction, tissue, condition,
-          developmental_stage, assay, confidence, bbsr_verified, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          developmental_stage, assay, confidence, bbsr_verified, submitter, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(gene_id, cell_type_id, marker_direction, tissue, condition, developmental_stage, assay)
         DO UPDATE SET confidence = excluded.confidence,
-          bbsr_verified = excluded.bbsr_verified, notes = excluded.notes,
+          bbsr_verified = excluded.bbsr_verified, submitter = excluded.submitter,
+          notes = excluded.notes,
           updated_at = now()""",
         values,
     )

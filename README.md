@@ -49,7 +49,17 @@ Use the curator for individual records or copy `data/import_template.csv` for bu
 uv run markercodex import path/to/markers.csv
 ```
 
-Required columns are `species`, `gene_symbol`, and `cell_type`. All other template columns are optional. Re-importing the same assertion updates its confidence, verification, and notes. Rows are imported in one transaction, so a bad row does not leave a partial batch.
+The curator's **Bulk import** tab also provides the complete template as a
+download. Its leading `#` comment lines document every column and are ignored
+automatically by both the importer and the curator preview.
+
+Required columns are `species`, `gene_symbol`, and `major_cell_type`. Use
+`cell_subtype` when a more specific identity is known; `submitter` records who
+provided the assertion. `gene_aliases` accepts semicolon-separated alternative
+gene names. The legacy `cell_type` column remains accepted for old
+imports. All other template columns are optional. Re-importing the same
+assertion updates its confidence, verification, submitter, and notes. Rows are
+imported in one transaction, so a bad row does not leave a partial batch.
 
 `bbsr_verified` accepts `true`, `yes`, `y`, or `1`. Only the BBSR team should set
 this field. Source columns create or reuse a reference and link it to the

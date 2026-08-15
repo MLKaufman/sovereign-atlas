@@ -15,6 +15,7 @@ from markercodex.operations import (
     add_assertion,
     add_source,
     link_evidence,
+    set_gene_aliases,
     upsert_cell_type,
     upsert_gene,
     upsert_species,
@@ -22,6 +23,7 @@ from markercodex.operations import (
 
 st.set_page_config(page_title="MarkerCodex Curator", page_icon="🧬", layout="wide")
 DB_PATH = Path(os.environ.get("MARKERCODEX_DB", DEFAULT_DB))
+TEMPLATE_PATH = Path(__file__).resolve().parents[1] / "data" / "import_template.csv"
 initialize(DB_PATH)
 st.title("MarkerCodex Curator")
 st.caption(f"Local curation workspace · {DB_PATH}")
@@ -34,12 +36,22 @@ def frame(query: str, params: list | None = None) -> pd.DataFrame:
 
 def render_assertion_editor(current: pd.Series, key: str) -> None:
     assertion_id = int(current.assertion_id)
-    st.subheader(f"Edit #{assertion_id} · {current.gene_symbol} → {current.cell_type}")
+    cell_label = current.major_cell_type
+    if current.get("cell_subtype") and not pd.isna(current.cell_subtype):
+        cell_label += f" / {current.cell_subtype}"
+    st.subheader(f"Edit #{assertion_id} · {current.gene_symbol} → {cell_label}")
     source_url = current.get("source_url")
     if source_url and not pd.isna(source_url):
         st.link_button("Open source ↗", str(source_url))
     notes_value = "" if pd.isna(current.notes) else str(current.notes)
+    alias_value = current.get("gene_aliases")
+    aliases = alias_value.tolist() if hasattr(alias_value, "tolist") else []
     with st.form(f"edit_assertion_{key}"):
+        alias_text = st.text_input(
+            "Gene aliases (semicolon-separated)",
+            value="; ".join(aliases),
+            key=f"aliases_{key}",
+        )
         confidence = st.selectbox(
             "Confidence",
             ["low", "moderate", "high"],
@@ -49,13 +61,20 @@ def render_assertion_editor(current: pd.Series, key: str) -> None:
         verified = st.checkbox(
             "BBSR verified", value=bool(current.bbsr_verified), key=f"verified_{key}"
         )
+        submitter_value = "" if pd.isna(current.submitter) else str(current.submitter)
+        submitter = st.text_input("Submitter", value=submitter_value, key=f"submitter_{key}")
         notes = st.text_area("Notes", value=notes_value, key=f"notes_{key}")
         save = st.form_submit_button("Save changes", type="primary")
     if save:
         with database(DB_PATH) as con:
+            set_gene_aliases(
+                con,
+                int(current.gene_id),
+                [alias.strip() for alias in alias_text.split(";") if alias.strip()],
+            )
             con.execute(
-                "UPDATE marker_assertions SET confidence=?, bbsr_verified=?, notes=?, updated_at=now() WHERE assertion_id=?",
-                [confidence, verified, notes or None, assertion_id],
+                "UPDATE marker_assertions SET confidence=?, bbsr_verified=?, submitter=?, notes=?, updated_at=now() WHERE assertion_id=?",
+                [confidence, verified, submitter or None, notes or None, assertion_id],
             )
         st.success("Changes saved")
         st.rerun()
@@ -73,13 +92,14 @@ browse, add_tab, edit_tab, import_tab, sources_tab = st.tabs(
 
 with browse:
     query = st.text_input("Search", placeholder="Gene, cell type, tissue, or source")
-    sql = """SELECT assertion_id, gene_symbol, cell_type, species_common_name,
-        tissue, marker_direction, confidence, bbsr_verified, source_titles,
-        source_url, notes FROM marker_atlas"""
+    sql = """SELECT assertion_id, gene_id, gene_symbol, gene_aliases,
+        major_cell_type, cell_subtype,
+        species_common_name, tissue, marker_direction, confidence, bbsr_verified,
+        submitter, source_titles, source_url, notes FROM marker_atlas"""
     params = []
     if query:
         sql += (
-            " WHERE concat_ws(' ', gene_symbol, cell_type, species, tissue, source_titles) ILIKE ?"
+            " WHERE concat_ws(' ', gene_symbol, major_cell_type, cell_subtype, species, tissue, source_titles, submitter) ILIKE ?"
         )
         params = [f"%{query}%"]
     browse_rows = frame(sql + " ORDER BY cell_type, gene_symbol", params)
@@ -108,23 +128,45 @@ with add_tab:
         common = c1.text_input("Common name", value="human")
         symbol = c2.text_input("Gene symbol*")
         stable_id = c2.text_input("Stable gene ID")
-        cell_type = c3.text_input("Cell type*")
-        ontology = c3.text_input("Cell Ontology ID", placeholder="CL:0000540")
+        gene_aliases = c2.text_input("Gene aliases", placeholder="Alias 1; Alias 2")
+        major_cell_type = c3.text_input("Major cell type*")
+        cell_subtype = c3.text_input("Subtype")
+        ontology = c3.text_input("Subtype or major Cell Ontology ID", placeholder="CL:0000540")
         tissue = c1.text_input("Tissue")
         condition = c2.text_input("Condition")
         stage = c3.text_input("Developmental stage")
         direction = c1.selectbox("Direction", ["positive", "negative"])
         confidence = c2.selectbox("Confidence", ["moderate", "high", "low"])
         assay = c3.text_input("Assay", value="scRNA-seq")
+        submitter = c1.text_input("Submitter")
         verified = st.checkbox("BBSR verified")
         notes = st.text_area("Curator notes")
         submitted = st.form_submit_button("Save marker assertion", type="primary")
     if submitted:
         try:
+            parsed_aliases = [
+                alias.strip() for alias in gene_aliases.split(";") if alias.strip()
+            ]
             with database(DB_PATH) as con:
                 species_id = upsert_species(con, species, common)
-                gene_id = upsert_gene(con, species_id, symbol, stable_id)
-                cell_id = upsert_cell_type(con, cell_type, ontology)
+                gene_id = upsert_gene(
+                    con,
+                    species_id,
+                    symbol,
+                    stable_id,
+                    parsed_aliases or None,
+                )
+                major_cell_id = upsert_cell_type(con, major_cell_type)
+                cell_id = (
+                    upsert_cell_type(
+                        con,
+                        cell_subtype,
+                        ontology,
+                        parent_cell_type_id=major_cell_id,
+                    )
+                    if cell_subtype
+                    else major_cell_id
+                )
                 assertion_id = add_assertion(
                     con,
                     gene_id=gene_id,
@@ -136,6 +178,7 @@ with add_tab:
                     assay=assay,
                     confidence=confidence,
                     bbsr_verified=verified,
+                    submitter=submitter,
                     notes=notes,
                 )
             st.success(f"Saved assertion {assertion_id}")
@@ -144,7 +187,7 @@ with add_tab:
 
 with edit_tab:
     assertions = frame(
-        "SELECT assertion_id, gene_symbol, cell_type, tissue, marker_direction, confidence, bbsr_verified, notes, source_url FROM marker_atlas ORDER BY assertion_id"
+        "SELECT assertion_id, gene_id, gene_symbol, gene_aliases, major_cell_type, cell_subtype, tissue, marker_direction, confidence, bbsr_verified, submitter, notes, source_url FROM marker_atlas ORDER BY assertion_id"
     )
     if assertions.empty:
         st.info("No assertions to edit yet.")
@@ -153,7 +196,7 @@ with edit_tab:
             "Assertion",
             assertions.assertion_id.tolist(),
             format_func=lambda value: (
-                f"#{value} · {assertions.loc[assertions.assertion_id == value, 'gene_symbol'].iloc[0]} → {assertions.loc[assertions.assertion_id == value, 'cell_type'].iloc[0]}"
+                f"#{value} · {assertions.loc[assertions.assertion_id == value, 'gene_symbol'].iloc[0]} → {assertions.loc[assertions.assertion_id == value, 'major_cell_type'].iloc[0]}"
             ),
         )
         current = assertions.loc[assertions.assertion_id == choice].iloc[0]
@@ -161,11 +204,18 @@ with edit_tab:
 
 with import_tab:
     st.markdown(
-        "Upload a CSV with at least `species`, `gene_symbol`, and `cell_type`. Optional source and context columns are documented in the README."
+        "Upload a CSV with at least `species`, `gene_symbol`, and `major_cell_type`. "
+        "The template includes every supported column and an embedded column guide."
+    )
+    st.download_button(
+        "Download CSV template",
+        data=TEMPLATE_PATH.read_bytes(),
+        file_name="markercodex_import_template.csv",
+        mime="text/csv",
     )
     upload = st.file_uploader("Marker CSV", type="csv")
     if upload:
-        preview = pd.read_csv(upload, keep_default_na=False)
+        preview = pd.read_csv(upload, keep_default_na=False, comment="#")
         st.dataframe(preview.head(25), use_container_width=True)
         if st.button("Import rows", type="primary"):
             with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:

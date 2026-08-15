@@ -1,2 +1,27 @@
-species,species_common_name,gene_symbol,stable_id,cell_type,ontology_id,marker_direction,tissue,condition,developmental_stage,assay,confidence,bbsr_verified,notes,source_title,citation,doi,pmid,url,evidence_type,evidence_location,evidence_note
-
+# MarkerCodex bulk import template. Documentation lines beginning with # are ignored during import.
+# species [required]: Scientific species name such as Homo sapiens.
+# species_common_name: Familiar species name such as human.
+# gene_symbol [required]: Official gene symbol such as MS4A1.
+# gene_aliases: Alternative gene names separated by semicolons such as CD20; B1.
+# stable_id: Stable gene identifier such as an Ensembl gene ID.
+# major_cell_type [required]: Broad identity such as B cell or macrophage.
+# cell_subtype: More specific identity such as naive B cell; leave blank for broad records.
+# ontology_id: Cell Ontology identifier for the subtype or major type such as CL:0000236.
+# marker_direction: positive or negative; defaults to positive.
+# tissue: Tissue where the marker claim applies; blank means unspecified.
+# condition: Disease treatment or biological condition; blank means unspecified.
+# developmental_stage: Developmental or age stage; blank means unspecified.
+# assay: Evidence assay such as scRNA-seq or CITE-seq; defaults to scRNA-seq.
+# confidence: low moderate or high; defaults to moderate.
+# bbsr_verified: true only after BBSR review; defaults to false.
+# submitter: Person or team that submitted the assertion.
+# notes: Free-text curator context about the marker assertion.
+# source_title: Title of the supporting publication or database record.
+# citation: Formatted citation for the source.
+# doi: Digital Object Identifier without a https://doi.org/ prefix.
+# pmid: PubMed identifier.
+# url: Direct source URL.
+# evidence_type: reported_marker differential_expression figure table expert_review or other.
+# evidence_location: Figure table supplement page or section locating the evidence.
+# evidence_note: Free-text explanation of how the source supports the assertion.
+species,species_common_name,gene_symbol,gene_aliases,stable_id,major_cell_type,cell_subtype,ontology_id,marker_direction,tissue,condition,developmental_stage,assay,confidence,bbsr_verified,submitter,notes,source_title,citation,doi,pmid,url,evidence_type,evidence_location,evidence_note

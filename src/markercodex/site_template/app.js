@@ -1,7 +1,8 @@
 const columns = [
-  ["gene_symbol", "Gene"], ["cell_type", "Cell type"], ["species_common_name", "Species"],
+  ["gene_symbol", "Gene"], ["gene_aliases", "Gene aliases"], ["major_cell_type", "Major cell type"], ["cell_subtype", "Subtype"], ["species_common_name", "Species"],
   ["tissue", "Tissue"], ["marker_direction", "Direction"], ["confidence", "Confidence"],
-  ["bbsr_verified", "BBSR verified"], ["source_titles", "Sources"], ["assay", "Assay"]
+  ["bbsr_verified", "BBSR verified"], ["submitter", "Submitter"], ["notes", "Notes"],
+  ["source_titles", "Sources"], ["assay", "Assay"]
 ];
 let allRows = [], visibleRows = [], sortKey = "gene_symbol", sortDirection = 1;
 const $ = (id) => document.getElementById(id);
@@ -45,6 +46,7 @@ function renderSources(row) {
 
 function renderCell(key, value, row) {
   if (key === "gene_symbol") return `<span class="gene">${escapeHtml(value)}</span>`;
+  if (key === "gene_aliases") return escapeHtml(Array.isArray(value) ? value.join("; ") : value || "—");
   if (key === "marker_direction") return `<span class="pill ${value === "negative" ? "negative" : ""}">${escapeHtml(value)}</span>`;
   if (key === "bbsr_verified") return value ? '<span class="yes" aria-label="Yes">✓</span>' : "—";
   if (key === "source_titles") return renderSources(row);
@@ -53,7 +55,7 @@ function renderCell(key, value, row) {
 
 function applyFilters() {
   const query = $("search").value.trim().toLowerCase();
-  const filters = { species_common_name: $("speciesFilter").value, cell_type: $("cellFilter").value, tissue: $("tissueFilter").value, marker_direction: $("directionFilter").value };
+  const filters = { species_common_name: $("speciesFilter").value, major_cell_type: $("majorCellFilter").value, cell_subtype: $("subtypeFilter").value, tissue: $("tissueFilter").value, marker_direction: $("directionFilter").value };
   visibleRows = allRows.filter(row => {
     if (query && !Object.values(row).some(v => text(v).toLowerCase().includes(query))) return false;
     if ($("verifiedFilter").checked && !row.bbsr_verified) return false;
@@ -81,9 +83,9 @@ document.addEventListener("click", event => {
   const copy = event.target.closest("[data-copy]");
   if (copy) copyGenes(copy.dataset.copy).catch(() => $("copyStatus").textContent = "Clipboard access was blocked");
 });
-["search", "speciesFilter", "cellFilter", "tissueFilter", "directionFilter", "verifiedFilter"].forEach(id => $(id).addEventListener("input", applyFilters));
-$("clearFilters").addEventListener("click", () => { $("search").value = ""; ["speciesFilter", "cellFilter", "tissueFilter", "directionFilter"].forEach(id => $(id).value = ""); $("verifiedFilter").checked = false; applyFilters(); });
+["search", "speciesFilter", "majorCellFilter", "subtypeFilter", "tissueFilter", "directionFilter", "verifiedFilter"].forEach(id => $(id).addEventListener("input", applyFilters));
+$("clearFilters").addEventListener("click", () => { $("search").value = ""; ["speciesFilter", "majorCellFilter", "subtypeFilter", "tissueFilter", "directionFilter"].forEach(id => $(id).value = ""); $("verifiedFilter").checked = false; applyFilters(); });
 
 fetch("markers.json").then(response => { if (!response.ok) throw new Error("Could not load markers"); return response.json(); }).then(rows => {
-  allRows = rows; setOptions("speciesFilter", "species_common_name"); setOptions("cellFilter", "cell_type"); setOptions("tissueFilter", "tissue"); applyFilters();
+  allRows = rows; setOptions("speciesFilter", "species_common_name"); setOptions("majorCellFilter", "major_cell_type"); setOptions("subtypeFilter", "cell_subtype"); setOptions("tissueFilter", "tissue"); applyFilters();
 }).catch(error => { $("tableBody").innerHTML = `<tr><td class="loading">${escapeHtml(error.message)}. Serve this directory with a local web server.</td></tr>`; });

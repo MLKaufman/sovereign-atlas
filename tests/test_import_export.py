@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pandas as pd
 
@@ -14,14 +15,18 @@ def test_import_export_and_site_build(tmp_path):
                 "species": "Homo sapiens",
                 "species_common_name": "human",
                 "gene_symbol": "GENE1",
-                "cell_type": "Example cell",
+                "gene_aliases": "ALIAS2; ALIAS1",
+                "major_cell_type": "Immune cell",
+                "cell_subtype": "Example cell",
                 "tissue": "example tissue",
                 "bbsr_verified": "true",
+                "submitter": "Example curator",
                 "source_title": "Example reference",
                 "doi": "10.0000/example",
             }
         ]
     ).to_csv(csv_path, index=False)
+    csv_path.write_text("# Documentation comments are ignored during import.\n" + csv_path.read_text())
     db_path = tmp_path / "atlas.duckdb"
     assert import_csv(csv_path, db_path) == 1
 
@@ -30,6 +35,10 @@ def test_import_export_and_site_build(tmp_path):
     assert exports["parquet"].exists()
     exported = pd.read_parquet(exports["parquet"])
     assert exported.loc[0, "gene_symbol"] == "GENE1"
+    assert list(exported.loc[0, "gene_aliases"]) == ["ALIAS1", "ALIAS2"]
+    assert exported.loc[0, "major_cell_type"] == "Immune cell"
+    assert exported.loc[0, "cell_subtype"] == "Example cell"
+    assert exported.loc[0, "submitter"] == "Example curator"
 
     index = build_site(db_path, tmp_path / "site")
     assert index.exists()
@@ -85,3 +94,37 @@ def test_import_reuses_referenced_species_genes_and_cell_types(tmp_path):
         assert con.execute("SELECT count(*) FROM genes").fetchone()[0] == 2
         assert con.execute("SELECT count(*) FROM cell_types").fetchone()[0] == 2
         assert con.execute("SELECT count(*) FROM marker_assertions").fetchone()[0] == 3
+
+
+def test_import_template_documents_all_supported_columns():
+    template = Path("data/import_template.csv")
+    text = template.read_text()
+    assert text.startswith("# MarkerCodex bulk import template")
+    columns = set(pd.read_csv(template, comment="#").columns)
+    assert columns == {
+        "species",
+        "species_common_name",
+        "gene_symbol",
+        "gene_aliases",
+        "stable_id",
+        "major_cell_type",
+        "cell_subtype",
+        "ontology_id",
+        "marker_direction",
+        "tissue",
+        "condition",
+        "developmental_stage",
+        "assay",
+        "confidence",
+        "bbsr_verified",
+        "submitter",
+        "notes",
+        "source_title",
+        "citation",
+        "doi",
+        "pmid",
+        "url",
+        "evidence_type",
+        "evidence_location",
+        "evidence_note",
+    }
