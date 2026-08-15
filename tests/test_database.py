@@ -14,7 +14,7 @@ def test_initialize_is_idempotent(tmp_path):
     initialize(path)
     initialize(path)
     with database(path, read_only=True) as con:
-        assert con.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 4
+        assert con.execute("SELECT count(*) FROM schema_migrations").fetchone()[0] == 5
         assert con.execute("SELECT count(*) FROM marker_atlas").fetchone()[0] == 0
 
 

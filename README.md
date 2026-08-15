@@ -71,6 +71,16 @@ reproducible inputs are `data/seeds/human_b_t_macrophage_markers.csv` and
 `data/seeds/human_immune_cell_type_hierarchy.sql`; each marker row includes its
 primary publication, DOI, PMID, and evidence note.
 
+To import the PanglaoDB marker snapshot, run:
+
+```bash
+uv run python scripts/import_panglaodb.py /path/to/PanglaoDB_markers_27_Mar_2020.tsv
+```
+
+The importer expands shared `Mm Hs` rows into separate human and mouse
+assertions, preserves PanglaoDB cell types and quantitative evidence in context
+fields, attaches the PanglaoDB source, and leaves every assertion unverified.
+
 ## Access from other apps
 
 DuckDB gives local apps direct, read-only access:
