@@ -27,6 +27,9 @@ TEMPLATE_PATH = Path(__file__).resolve().parents[1] / "data" / "import_template.
 initialize(DB_PATH)
 st.title("MarkerCodex Curator")
 st.caption(f"Local curation workspace · {DB_PATH}")
+with st.sidebar:
+    st.page_link("app.py", label="MarkerCodex", icon="🧬")
+    st.page_link("pages/1_Refmats.py", label="Refmats", icon="🧮")
 
 
 def frame(query: str, params: list | None = None) -> pd.DataFrame:

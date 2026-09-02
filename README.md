@@ -13,6 +13,7 @@ The repository is the application: DuckDB is canonical, Parquet and CSV snapshot
 - Parquet and CSV exports
 - Static, responsive atlas with search, filters, sorting, and filtered-gene copy buttons
 - Local curator for browsing, adding, editing, deleting, bulk importing, and reference linking
+- Separate DuckDB catalog plus local CSV/TSV storage for reusable reference matrices
 - Tests, linting, GitHub Actions validation, and GitHub Pages deployment
 
 ## Quick start
@@ -30,6 +31,12 @@ The curator writes to `data/markercodex.duckdb` by default. To use another datab
 ```bash
 MARKERCODEX_DB=/path/to/atlas.duckdb uv run streamlit run curator/app.py
 ```
+
+The curator sidebar has two destinations: **MarkerCodex** and **Refmats**. Refmats
+contains tabs to view/manage stored matrices and add new ones.
+Matrix metadata is kept separately in `data/reference_matrices.duckdb`, while uploaded
+files are stored in `data/reference_matrices/files/`. Override those locations with
+`MARKERCODEX_REFERENCE_DB` and `MARKERCODEX_MATRIX_DIR` when needed.
 
 Build portable exports and the static site:
 
@@ -124,11 +131,15 @@ The Pages workflow regenerates the exports and site from the canonical database,
 
 ```text
 data/                         canonical DuckDB, import template, portable exports
+  reference_matrices.duckdb   reference-matrix metadata catalog (created on first upload)
+  reference_matrices/files/   uploaded CSV and TSV matrices
 curator/app.py                local Streamlit curation UI
+curator/pages/1_Refmats.py    combined browse/manage and upload page
 src/markercodex/
   migrations/                 ordered SQL schema migrations
   site_template/              self-contained static atlas
   db.py                       initialization and migration runner
+  reference_matrices.py       upload validation, file naming, storage, and catalog access
   operations.py               shared curation operations
   importer.py                 transactional CSV bulk import
   export.py                   Parquet, CSV, and static-site generation
