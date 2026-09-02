@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +19,26 @@ from markercodex.reference_matrices import (
 )
 
 st.set_page_config(page_title="Refmats · MarkerCodex", page_icon="🧮", layout="wide")
+st.markdown(
+    """<style>
+    section[data-testid="stSidebar"] div[data-testid="stPageLink"] a,
+    section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {
+        min-height: 3.5rem;
+        padding: 0.8rem 1rem;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stPageLink"] p,
+    section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {
+        font-size: 1.15rem;
+        font-weight: 650;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stPageLink"] svg,
+    section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] svg {
+        width: 1.35rem;
+        height: 1.35rem;
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
 CATALOG_PATH = Path(os.environ.get("MARKERCODEX_REFERENCE_DB", DEFAULT_REFERENCE_DB))
 STORAGE_DIR = Path(os.environ.get("MARKERCODEX_MATRIX_DIR", DEFAULT_MATRIX_STORAGE))
 initialize_reference_catalog(CATALOG_PATH)
@@ -37,6 +58,19 @@ manage_tab, add_tab = st.tabs(["View / manage matrices", "Add new matrix"])
 with manage_tab:
     with reference_database(CATALOG_PATH, read_only=True) as con:
         catalog = con.execute("SELECT * FROM reference_matrices ORDER BY created_at DESC").fetchdf()
+
+    export_catalog = catalog.copy()
+    if "column_names" in export_catalog:
+        export_catalog["column_names"] = export_catalog["column_names"].apply(
+            lambda names: "; ".join(names.tolist() if hasattr(names, "tolist") else names)
+        )
+    st.download_button(
+        "Export all metadata as CSV",
+        data=export_catalog.to_csv(index=False).encode("utf-8"),
+        file_name=f"refmat_metadata_{date.today().isoformat()}.csv",
+        mime="text/csv",
+        icon="📥",
+    )
 
     if catalog.empty:
         st.info("No reference matrices have been uploaded yet. Use the Add new matrix tab to begin.")

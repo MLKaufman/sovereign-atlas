@@ -22,6 +22,26 @@ from markercodex.operations import (
 )
 
 st.set_page_config(page_title="MarkerCodex Curator", page_icon="🧬", layout="wide")
+st.markdown(
+    """<style>
+    section[data-testid="stSidebar"] div[data-testid="stPageLink"] a,
+    section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {
+        min-height: 3.5rem;
+        padding: 0.8rem 1rem;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stPageLink"] p,
+    section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {
+        font-size: 1.15rem;
+        font-weight: 650;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stPageLink"] svg,
+    section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] svg {
+        width: 1.35rem;
+        height: 1.35rem;
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
 DB_PATH = Path(os.environ.get("MARKERCODEX_DB", DEFAULT_DB))
 TEMPLATE_PATH = Path(__file__).resolve().parents[1] / "data" / "import_template.csv"
 initialize(DB_PATH)
